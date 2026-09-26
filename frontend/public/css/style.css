@@ -104,6 +104,10 @@ body {
   max-width: 220px;
   overflow-wrap: anywhere;
   white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ---------- Bottom tab bar ---------- */
