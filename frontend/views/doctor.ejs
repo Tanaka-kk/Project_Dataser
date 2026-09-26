@@ -96,7 +96,7 @@
         <tr class="${past ? "opacity-50" : ""}">
           <td>${a.username}</td>
           <td>${a.pet_name}</td>
-          <td class="cell-wrap">${a.reason || "-"}</td>
+          <td><div class="cell-wrap">${a.reason || "-"}</div></td>
           <td>${a.status || "Pending"} ${past ? '<span class="badge text-bg-secondary ms-1">Past</span>' : ""}</td>
           <td>${a.app_date ? new Date(a.app_date).toLocaleDateString() : "-"}</td>
           <td>${a.app_time || "-"}</td>
