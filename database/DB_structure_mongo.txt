@@ -1,0 +1,77 @@
+Database: MongoDB (appointment_db)
+
+Every document uses MongoDB's own _id (ObjectId) as its primary key.
+The API aliases _id to the field names below (e.g. a user document's
+_id is returned as "user_id") so the rest of this doc describes the
+JSON shape the frontend actually sees, not the raw stored document.
+
+Fields ending in _id below that aren't the primary key are ObjectId
+references to another collection (the MongoDB equivalent of a
+foreign key) — Mongo does not enforce these; the API checks for
+dependent documents itself before allowing a delete.
+
+users
+  user_id (PK)
+  username        - unique (enforced by a unique index, see init-mongo.js)
+  password        - bcrypt hash
+  full_name
+  phone
+  created_at
+  role            - "user" | "admin" | "doctor"
+  doc_id (ref -> doctors) - set only for role: "doctor"
+
+
+pets
+  pet_id (PK)
+  user_id (ref -> users)
+  pet_name
+  species
+  bloodtype
+  birth_date
+  weight
+  allergy
+
+
+doctors
+  doc_id (PK)
+  doc_name
+  specialization
+  phone
+  is_available
+
+
+appointments
+  app_id (PK)
+  user_id (ref -> users)
+  pet_id (ref -> pets)
+  doc_id (ref -> doctors)
+  reason
+  status
+  app_date
+  app_time
+
+
+medical_records
+  record_id (PK)
+  pet_id (ref -> pets)
+  doc_id (ref -> doctors)
+  app_id (ref -> appointments)
+  diagnosis
+  treatment_detail
+  cost
+  treatment_date
+  treatment_time
+
+
+Relationships (application-enforced, not database-enforced):
+  users (1) --- (N) pets
+  pets (1) --- (N) appointments
+  doctors (1) --- (N) appointments
+  appointments (1) --- (0 or 1) medical_records
+
+Deleting a pet or a doctor is blocked (by the API, via an explicit
+find-before-delete check) if any appointment or medical_records
+document still references it.
+
+Note: the old Fact_table from the MySQL design (see DB_structure.txt)
+has been dropped — nothing in the code ever read or wrote to it.

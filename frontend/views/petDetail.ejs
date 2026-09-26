@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%- include('partials/head', { title: 'Pet Details' }) %>
+</head>
+<body class="bg-body-tertiary">
+  <%- include('partials/navbar', { active: 'pet' }) %>
+
+  <div class="container pb-5" style="max-width: 560px;">
+    <a href="/home" id="backLink" class="text-decoration-none text-muted d-inline-block mb-3">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+    <div class="card page-card p-4">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center gap-3">
+          <div class="pet-avatar" style="width:56px;height:56px;font-size:1.7rem;">🐾</div>
+          <h4 class="mb-0" id="petName">Pet</h4>
+        </div>
+        <a href="#" id="editLink" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>
+      </div>
+      <div id="alertBox" class="alert d-none"></div>
+
+      <dl class="row mb-4">
+        <dt class="col-5 text-muted">Species</dt>
+        <dd class="col-7" id="species">-</dd>
+        <dt class="col-5 text-muted">Blood Type</dt>
+        <dd class="col-7" id="bloodtype">-</dd>
+        <dt class="col-5 text-muted">Birth Date</dt>
+        <dd class="col-7" id="birthDate">-</dd>
+        <dt class="col-5 text-muted">Weight (kg)</dt>
+        <dd class="col-7" id="weight">-</dd>
+        <dt class="col-5 text-muted">Allergy</dt>
+        <dd class="col-7" id="allergy">-</dd>
+      </dl>
+
+      <a href="#" id="historyLink" class="btn btn-brand w-100"><i class="bi bi-clipboard2-pulse me-1"></i>Medical History</a>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const session = requireAuth();
+    if (session) {
+      wireDashboardLink(session);
+      document.getElementById("backLink").href = dashboardUrlFor(session.role);
+    }
+    const params = new URLSearchParams(window.location.search);
+    const petId = params.get("id");
+
+    if (!petId) window.location.href = "/home";
+
+    document.getElementById("editLink").href = `/pet?id=${petId}`;
+    document.getElementById("historyLink").href = `/petHistory?id=${petId}`;
+
+    async function loadPet() {
+      const res = await fetch(`${API_BASE}/infopet/${petId}`);
+      const pet = await res.json();
+
+      document.getElementById("petName").textContent = pet.pet_name || "Pet";
+      document.getElementById("species").textContent = pet.species || "-";
+      document.getElementById("bloodtype").textContent = pet.bloodtype || "-";
+      document.getElementById("birthDate").textContent = pet.birth_date ? pet.birth_date.split("T")[0] : "-";
+      document.getElementById("weight").textContent = pet.weight || "-";
+      document.getElementById("allergy").textContent = pet.allergy || "-";
+    }
+
+    loadPet().catch(() => showAlert("alertBox", "Cannot reach server"));
+  </script>
+</body>
+</html>

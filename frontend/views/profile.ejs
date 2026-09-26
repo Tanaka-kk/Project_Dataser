@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%- include('partials/head', { title: 'Profile' }) %>
+</head>
+<body class="bg-body-tertiary">
+  <%- include('partials/navbar', { active: 'profile' }) %>
+
+  <div class="container pb-5" style="max-width: 500px;">
+    <div class="card page-card p-4">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="pet-avatar" style="width:56px;height:56px;font-size:1.7rem;"><i class="bi bi-person-fill"></i></div>
+        <h4 class="mb-0">My Profile</h4>
+      </div>
+      <div id="alertBox" class="alert d-none"></div>
+
+      <form id="profileForm">
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-control" id="username" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" id="fullName">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Phone</label>
+          <input type="text" class="form-control" id="phone">
+        </div>
+        <button type="submit" class="btn btn-brand px-4"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const session = requireAuth();
+    if (session) wireDashboardLink(session);
+
+    async function loadUser() {
+      const res = await fetch(`${API_BASE}/infoUser/${session.user_id}`);
+      const user = await res.json();
+
+      document.getElementById("username").value = user.username || "";
+      document.getElementById("fullName").value = user.full_name || "";
+      document.getElementById("phone").value = user.phone || "";
+    }
+
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const full_name = document.getElementById("fullName").value;
+      const phone = document.getElementById("phone").value;
+
+      const res = await fetch(`${API_BASE}/updateUser/${session.user_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name, phone })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        showAlert("alertBox", data.message || "Failed to update profile");
+        return;
+      }
+      showAlert("alertBox", "Profile updated successfully", "success");
+    });
+
+    loadUser().catch(() => showAlert("alertBox", "Cannot reach server"));
+  </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%- include('partials/head', { title: 'My Appointments' }) %>
+</head>
+<body class="bg-body-tertiary">
+  <%- include('partials/navbar', { active: 'dashboard' }) %>
+
+  <div class="container pb-5">
+    <div class="card page-card p-4 mb-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-calendar-check-fill text-brand-dark me-2"></i>My Appointments</h4>
+        <a href="/booking" class="btn btn-brand btn-sm"><i class="bi bi-calendar-plus me-1"></i>Book Appointment</a>
+      </div>
+    </div>
+
+    <div id="alertBox" class="alert d-none"></div>
+
+    <div class="card page-card p-4">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr><th>Pet</th><th>Doctor</th><th>Reason</th><th>Status</th><th>Date</th><th>Time</th><th></th></tr>
+          </thead>
+          <tbody id="appointmentsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/bottomnav', { active: 'appointments' }) %>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const session = requireRole("user");
+
+    async function loadAppointments() {
+      const res = await fetch(`${API_BASE}/GetAppointmentslist/${session.user_id}`);
+      const rows = await res.json();
+      document.getElementById("appointmentsTable").innerHTML = rows.map(a => {
+        const past = isPastDate(a.app_date);
+        return `
+        <tr class="${past ? "opacity-50" : ""}">
+          <td>${a.pet_name}</td>
+          <td>${a.doc_name}</td>
+          <td>${a.reason || "-"}</td>
+          <td>${a.status || "Pending"} ${past ? '<span class="badge text-bg-secondary ms-1">Past</span>' : ""}</td>
+          <td>${a.app_date ? new Date(a.app_date).toLocaleDateString() : "-"}</td>
+          <td>${a.app_time || "-"}</td>
+          <td>
+            <button class="btn btn-outline-danger btn-sm" onclick="cancelAppointment('${a.app_id}')">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+      }).join("") || `<tr><td colspan="7" class="text-muted text-center py-3">No appointments yet.</td></tr>`;
+    }
+
+    async function cancelAppointment(app_id) {
+      const res = await fetch(`${API_BASE}/deleteAppointment/${app_id}`, { method: "DELETE" });
+      const data = await res.json();
+
+      if (data.error) {
+        showAlert("alertBox", data.message || "Failed to cancel appointment");
+        return;
+      }
+
+      loadAppointments();
+    }
+
+    loadAppointments().catch(() => showAlert("alertBox", "Cannot reach server"));
+  </script>
+</body>
+</html>

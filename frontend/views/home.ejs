@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%- include('partials/head', { title: 'Home' }) %>
+</head>
+<body class="bg-body-tertiary">
+  <%- include('partials/navbar', { active: 'dashboard' }) %>
+
+  <div class="container pb-5">
+    <div class="card page-card p-4 mb-4">
+      <h4 id="welcomeMsg" class="mb-0">Welcome</h4>
+      <p class="text-muted mb-0">Here's what's going on with your pets today.</p>
+      <div class="d-flex gap-2 mt-3">
+        <a href="/booking" class="btn btn-brand btn-sm"><i class="bi bi-calendar-plus me-1"></i>Book Appointment</a>
+        <a href="/appointments" class="btn btn-outline-secondary btn-sm"><i class="bi bi-calendar-check me-1"></i>My Appointments</a>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0"><i class="bi bi-heart-fill text-danger me-2"></i>My Pets</h5>
+      <button class="btn btn-brand btn-sm" data-bs-toggle="modal" data-bs-target="#addPetModal">
+        <i class="bi bi-plus-lg me-1"></i>Add Pet
+      </button>
+    </div>
+
+    <div class="input-group mb-3">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" class="form-control" id="petSearch" placeholder="Search pets by name...">
+    </div>
+
+    <div id="alertBox" class="alert d-none"></div>
+    <div id="petList" class="row g-3"></div>
+  </div>
+
+  <%- include('partials/bottomnav', { active: 'pets' }) %>
+
+  <!-- Add Pet Modal -->
+  <div class="modal fade" id="addPetModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Pet</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="addPetForm">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Pet Name</label>
+              <input type="text" class="form-control" id="petName" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Species</label>
+              <input type="text" class="form-control" id="petType" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Birth Date</label>
+              <input type="date" class="form-control" id="petAge" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-brand">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    const session = requireRole("user");
+    let addPetModal;
+    let allPets = [];
+
+    async function loadUser() {
+      const res = await fetch(`${API_BASE}/infoUser/${session.user_id}`);
+      const user = await res.json();
+      document.getElementById("welcomeMsg").innerHTML =
+        `Welcome, <span class="text-brand-dark">${user.full_name || user.username}</span> 👋`;
+    }
+
+    async function loadPets() {
+      const res = await fetch(`${API_BASE}/getpets/${session.user_id}`);
+      allPets = await res.json();
+      renderPets(allPets);
+    }
+
+    function renderPets(pets) {
+      const list = document.getElementById("petList");
+
+      if (!pets.length) {
+        const message = allPets.length
+          ? "No pets match your search."
+          : `No pets yet. Click "Add Pet" to get started.`;
+        list.innerHTML = `
+          <div class="empty-state w-100">
+            <i class="bi bi-emoji-smile d-block mb-2"></i>
+            <p class="mb-0">${message}</p>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = pets.map(pet => `
+        <div class="col-md-4">
+          <a href="/petDetail?id=${pet.pet_id}" class="card pet-card text-decoration-none text-body h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div class="pet-avatar">🐾</div>
+              <div>
+                <h6 class="card-title mb-0">${pet.pet_name}</h6>
+                <small class="text-muted">View details</small>
+              </div>
+            </div>
+          </a>
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("petSearch").addEventListener("input", (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      renderPets(allPets.filter(p => p.pet_name.toLowerCase().includes(q)));
+    });
+
+    document.getElementById("addPetForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const pet_name = document.getElementById("petName").value;
+      const pet_type = document.getElementById("petType").value;
+      const pet_age = document.getElementById("petAge").value;
+
+      const res = await fetch(`${API_BASE}/insertPet/${session.user_id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pet_name, pet_type, pet_age })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        showAlert("alertBox", data.message || "Failed to add pet");
+        return;
+      }
+
+      addPetModal.hide();
+      document.getElementById("addPetForm").reset();
+      loadPets();
+    });
+
+    addPetModal = new bootstrap.Modal(document.getElementById("addPetModal"));
+    Promise.all([loadUser(), loadPets()]).catch(() => showAlert("alertBox", "Cannot reach server"));
+  </script>
+</body>
+</html>

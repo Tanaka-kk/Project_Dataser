@@ -1,0 +1,151 @@
+:root {
+  --brand: #0d9488;
+  --brand-dark: #0f766e;
+  --brand-light: #ccfbf1;
+  --brand-text: var(--brand-dark);
+}
+
+[data-bs-theme="dark"] {
+  --brand-text: #5eead4;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ---------- Auth pages (login / register) ---------- */
+.auth-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+}
+
+.auth-card {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.auth-logo {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.text-brand-dark {
+  color: var(--brand-text);
+}
+
+/* ---------- Navbar ---------- */
+.navbar-brand {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.navbar.bg-brand {
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-dark) 100%) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ---------- Buttons ---------- */
+.btn-brand {
+  background-color: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.btn-brand:hover {
+  background-color: var(--brand-dark);
+  border-color: var(--brand-dark);
+  color: #fff;
+}
+
+/* ---------- Cards / content ---------- */
+.page-card {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
+
+.pet-card {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pet-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.pet-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--bs-secondary-color);
+}
+
+.empty-state .bi {
+  font-size: 2.5rem;
+  color: var(--brand);
+}
+
+/* ---------- Bottom tab bar ---------- */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--bs-body-bg);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+  z-index: 1030;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  text-align: center;
+  padding: 0.6rem 0 0.5rem;
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+  font-size: 0.75rem;
+}
+
+.bottom-nav-item i {
+  display: block;
+  font-size: 1.25rem;
+  margin-bottom: 0.1rem;
+}
+
+.bottom-nav-item.active {
+  color: var(--brand-text);
+}
+
+/* ---------- Forms ---------- */
+.form-control:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 0.2rem rgba(13, 148, 136, 0.15);
+}
+
+label.form-label {
+  font-weight: 500;
+}
+
+/* ---------- Theme toggle ---------- */
+.theme-toggle-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+}

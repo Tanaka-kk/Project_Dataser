@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%- include('partials/head', { title: 'Medical Record' }) %>
+</head>
+<body class="bg-body-tertiary">
+  <%- include('partials/navbar', { active: 'pet' }) %>
+
+  <div class="container pb-5" style="max-width: 560px;">
+    <a href="#" id="backLink" class="text-decoration-none text-muted d-inline-block mb-3">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+    <div class="card page-card p-4">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="pet-avatar" style="width:56px;height:56px;font-size:1.7rem;"><i class="bi bi-clipboard2-pulse"></i></div>
+        <div>
+          <h4 class="mb-0">Medical Record</h4>
+          <small class="text-muted" id="recordDate">-</small>
+        </div>
+      </div>
+      <div id="alertBox" class="alert d-none"></div>
+
+      <dl class="row">
+        <dt class="col-5 text-muted">Doctor</dt>
+        <dd class="col-7" id="docName">-</dd>
+        <dt class="col-5 text-muted">Diagnosis</dt>
+        <dd class="col-7" id="diagnosis">-</dd>
+        <dt class="col-5 text-muted">Treatment</dt>
+        <dd class="col-7" id="treatment">-</dd>
+        <dt class="col-5 text-muted">Time</dt>
+        <dd class="col-7" id="time">-</dd>
+        <dt class="col-5 text-muted">Cost</dt>
+        <dd class="col-7" id="cost">-</dd>
+      </dl>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const session = requireAuth();
+    if (session) wireDashboardLink(session);
+
+    const params = new URLSearchParams(window.location.search);
+    const recordId = params.get("id");
+    if (!recordId) window.location.href = "/home";
+
+    document.getElementById("backLink").addEventListener("click", (e) => {
+      e.preventDefault();
+      history.back();
+    });
+
+    async function loadRecord() {
+      const res = await fetch(`${API_BASE}/GetMedicalRecordInfo/${recordId}`);
+      const record = await res.json();
+
+      document.getElementById("recordDate").textContent =
+        record.treatment_date ? new Date(record.treatment_date).toLocaleDateString() : "-";
+      document.getElementById("docName").textContent = record.doc_name || "-";
+      document.getElementById("diagnosis").textContent = record.diagnosis || "-";
+      document.getElementById("treatment").textContent = record.treatment_detail || "-";
+      document.getElementById("time").textContent = record.treatment_time || "-";
+      document.getElementById("cost").textContent = record.cost != null ? `${record.cost} B` : "-";
+    }
+
+    loadRecord().catch(() => showAlert("alertBox", "Cannot reach server"));
+  </script>
+</body>
+</html>
