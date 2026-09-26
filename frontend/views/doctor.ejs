@@ -100,10 +100,12 @@
           <td>${a.status || "Pending"} ${past ? '<span class="badge text-bg-secondary ms-1">Past</span>' : ""}</td>
           <td>${a.app_date ? new Date(a.app_date).toLocaleDateString() : "-"}</td>
           <td>${a.app_time || "-"}</td>
-          <td class="d-flex gap-2">
-            <a href="/petDetail?id=${a.pet_id}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clipboard2-pulse"></i></a>
-            ${!a.status ? `<button class="btn btn-success btn-sm" onclick="acceptAppointment('${a.app_id}')"><i class="bi bi-check-lg"></i></button>` : ""}
-            <button class="btn btn-brand btn-sm" onclick="openAddRecord('${a.app_id}')"><i class="bi bi-plus-lg"></i></button>
+          <td>
+            <div class="d-flex gap-2">
+              <a href="/petDetail?id=${a.pet_id}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clipboard2-pulse"></i></a>
+              ${!a.status ? `<button class="btn btn-success btn-sm" onclick="acceptAppointment('${a.app_id}')"><i class="bi bi-check-lg"></i></button>` : ""}
+              <button class="btn btn-brand btn-sm" onclick="openAddRecord('${a.app_id}')"><i class="bi bi-plus-lg"></i></button>
+            </div>
           </td>
         </tr>
       `;

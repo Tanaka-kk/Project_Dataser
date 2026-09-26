@@ -170,13 +170,15 @@
           <td>${d.specialization}</td>
           <td>${d.phone || "-"}</td>
           <td>${d.is_available ? '<span class="badge text-bg-success">Yes</span>' : '<span class="badge text-bg-secondary">No</span>'}</td>
-          <td class="d-flex gap-2">
-            <button class="btn btn-outline-secondary btn-sm" onclick='openEditDoctor(${JSON.stringify(d)})'>
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-outline-danger btn-sm" onclick="deleteDoctor('${d.doc_id}')">
-              <i class="bi bi-trash"></i>
-            </button>
+          <td>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary btn-sm" onclick='openEditDoctor(${JSON.stringify(d)})'>
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger btn-sm" onclick="deleteDoctor('${d.doc_id}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
       `).join("") || `<tr><td colspan="5" class="text-muted text-center py-3">No doctors found.</td></tr>`;
