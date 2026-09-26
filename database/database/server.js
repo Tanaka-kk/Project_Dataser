@@ -295,6 +295,14 @@ app.put("/updatePet/:pet_id", async (req, res) => {
   try {
     const { pet_id } = req.params;
     const { pet_name, species, bloodtype, birth_date, weight, allergy } = req.body;
+
+    if (weight && Number(weight) < 0) {
+      return res.status(400).json({
+        error: true,
+        message: "Weight cannot be negative"
+      });
+    }
+
     await db.collection("pets").updateOne(
       { _id: new ObjectId(pet_id) },
       { $set: {
@@ -515,6 +523,29 @@ app.delete("/deleteAppointment/:app_id", async (req, res) => {
     });
   } catch (err) {
     console.error("Delete Appointment Error:", err);
+    res.status(500).json({
+      error: true,
+      message: "Internal Server Error"
+    });
+  }
+});
+
+// Doctor accepts a pending appointment
+app.put("/updateAppointmentStatus/:app_id", async (req, res) => {
+  try {
+    const { app_id } = req.params;
+    const { status } = req.body;
+    await db.collection("appointments").updateOne(
+      { _id: new ObjectId(app_id) },
+      { $set: { status } }
+    );
+
+    res.json({
+      error: false,
+      message: "Appointment status updated"
+    });
+  } catch (err) {
+    console.error("Update Appointment Status Error:", err);
     res.status(500).json({
       error: true,
       message: "Internal Server Error"

@@ -100,6 +100,12 @@ body {
   color: var(--brand);
 }
 
+.cell-wrap {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 /* ---------- Bottom tab bar ---------- */
 .bottom-nav {
   position: fixed;
