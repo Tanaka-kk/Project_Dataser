@@ -14,6 +14,10 @@ app.set("views", path.join(__dirname, "..", "..", "frontend", "views"))
 
 const saltRounds = 10
 
+if (!process.env.MONGO_URI) {
+  throw new Error("MONGO_URI environment variable is not set")
+}
+
 const client = new MongoClient(process.env.MONGO_URI)
 let db
 let dbPromise
