@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "database/database/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["frontend/**"]
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "database/database/server.js" }
+  ]
+}

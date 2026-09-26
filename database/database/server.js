@@ -16,6 +16,28 @@ const saltRounds = 10
 
 const client = new MongoClient(process.env.MONGO_URI)
 let db
+let dbPromise
+
+// Vercel runs this file as a serverless function: a fresh request can land on a
+// warm instance that already connected, or a cold one that hasn't. Caching the
+// connect() promise means every request reuses the same connection instead of
+// opening a new one each time.
+function getDb() {
+  if (!dbPromise) {
+    dbPromise = client.connect().then(() => client.db())
+  }
+  return dbPromise
+}
+
+app.use(async (req, res, next) => {
+  try {
+    db = await getDb()
+    next()
+  } catch (err) {
+    console.error("MongoDB connection error:", err)
+    res.status(500).json({ error: true, message: "Database connection failed" })
+  }
+})
 
 const idify = (field) => (doc) => {
   if (!doc) return doc
@@ -685,12 +707,18 @@ app.use((err, req, res, next) => {
     res.status(status).json(messages[status] || messages[500]);
 });
 
-const PORT = process.env.PORT || 8000
+// Vercel imports this file as a serverless function and handles the HTTP
+// server itself — app.listen() is only for running this as a normal
+// long-lived process (local dev, Docker).
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 8000
 
-client.connect().then(() => {
-  db = client.db();
-  app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`))
-}).catch(err => {
-  console.error("MongoDB connection error:", err);
-  process.exit(1);
-});
+  getDb().then(() => {
+    app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`))
+  }).catch(err => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  });
+}
+
+module.exports = app;
