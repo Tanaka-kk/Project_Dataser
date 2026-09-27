@@ -370,6 +370,15 @@ app.post("/insertMedRecord/:app_id", async (req, res) => {
       return res.status(404).json({ error: true, message: "Appointment not found" });
     }
 
+    const existingRecord = await db.collection("medical_records").findOne({ app_id: appointment._id });
+
+    if (existingRecord) {
+      return res.status(400).json({
+        error: true,
+        message: "A medical record already exists for this appointment"
+      });
+    }
+
     await db.collection("medical_records").insertOne({
       pet_id: appointment.pet_id,
       doc_id: appointment.doc_id,
@@ -591,9 +600,11 @@ app.get("/doctorAppointments/:doc_id", async (req, res) => {
       { $unwind: "$pet" },
       { $lookup: { from: "users", localField: "user_id", foreignField: "_id", as: "user" } },
       { $unwind: "$user" },
+      { $lookup: { from: "medical_records", localField: "_id", foreignField: "app_id", as: "records" } },
       { $project: {
           pet_id: 1, reason: 1, status: 1, app_date: 1, app_time: 1,
-          pet_name: "$pet.pet_name", username: "$user.username"
+          pet_name: "$pet.pet_name", username: "$user.username",
+          has_record: { $gt: [{ $size: "$records" }, 0] }
         }
       },
       { $sort: { app_date: 1, app_time: 1 } }
