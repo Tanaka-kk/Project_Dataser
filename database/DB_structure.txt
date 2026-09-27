@@ -1,59 +1,111 @@
-Users 
-user_id (PK) 
-username
-password
-full_name
-phone
-created_at - (วันที่สร้าง)
 
+use appointment_db;
 
-Pets 
-pet_id (PK)
-user_id (FK)
-pet_name 
-species 
-breed 
-bloodtype
-birth_date 
-gender 
-weight 
-allergy
+//User Collection
+db.createCollection("users", {
+   validator: {
+      $jsonSchema: {
+         bsonType: "object",
+         required: ["username", "password"],
+         properties: {
+            username: { bsonType: "string" },
+            password: { bsonType: "string" },
+            full_name: { bsonType: "string" },
+            nickname: { bsonType: "string" },
+            phone: { bsonType: "string" },
+            image_url: { bsonType: "string" },
+            created_at: { bsonType: "date" },
+            role: { bsonType: "string" }
+         }
+      }
+   }
+});
+db.users.createIndex({ username: 1 }, { unique: true });
 
+// Pets Collection
+db.createCollection("pets", {
+   validator: {
+      $jsonSchema: {
+         bsonType: "object",
+         required: ["pet_name", "species"],
+         properties: {
+            user_id: { bsonType: "objectId" }, // References users._id
+            pet_name: { bsonType: "string" },
+            species: { bsonType: "string" },
+            bloodtype: { bsonType: "string" },
+            birth_date: { bsonType: "date" },
+            weight: { bsonType: "decimal" },
+            allergy: { bsonType: "string" },
+            breed: { bsonType: "string" },
+            gender: { bsonType: "string" },
+            image_url: { bsonType: "string" }
+         }
+      }
+   }
+});
 
-Appointments 
-app_id (PK)
-user_id (FK)
-pet_id (FK)
-doc_id (FK)
-reason
-status 
-app_date
-app_time
+// Doctor Collection
+db.createCollection("doctors", {
+   validator: {
+      $jsonSchema: {
+         bsonType: "object",
+         properties: {
+            user_id: { bsonType: "objectId" }, // References users._id
+            specialization: { bsonType: "string" },
+            work_time: { bsonType: "string" },
+            is_available: { bsonType: "string" }
+         }
+      }
+   }
+});
 
+// Appointments Collection
+db.createCollection("appointments", {
+   validator: {
+      $jsonSchema: {
+         bsonType: "object",
+         properties: {
+            user_id: { bsonType: "objectId" }, // References users._id
+            pet_id: { bsonType: "objectId" },  // References pets._id
+            doc_id: { bsonType: "objectId" },  // References doctors._id
+            reason: { bsonType: "string" },
+            status: { bsonType: "string" }, // Default logic handled in application layer, or custom validator
+            app_date: { bsonType: "date" }  // Combined date and time into one Date object is recommended
+         }
+      }
+   }
+});
 
-Medical_records 
-record_id (PK)
-pet_id (FK)
-doc_id (FK)
-app_id (FK)
-diagnosis
-treatment_detail
-cost
-treatment_date
-treatment_time
+// MedicalRecords Collection
+db.createCollection("medical_records", {
+   validator: {
+      $jsonSchema: {
+         bsonType: "object",
+         properties: {
+            pet_id: { bsonType: "objectId" },
+            doc_id: { bsonType: "objectId" },
+            app_id: { bsonType: "objectId" },
+            diagnosis: { bsonType: "string" },
+            treatment_detail: { bsonType: "string" },
+            cost: { bsonType: "decimal" },
+            treatment_date: { bsonType: "date" }
+         }
+      }
+   }
+});
 
-
-Doctors 
-doc_id (PK)
-doc_name
-specialization
-phone
-is_available  (เวลาที่ว่าง)
-
-
-Fact_table 
-app_id (FK)
-user_id (FK)
-pet_id (FK)
-doc_id (FK)
-record_id (FK)
+// Fact_table Collection
+db.createCollection("fact_table", {
+   validator: {
+      $jsonSchema: {
+         bsonType: "object",
+         properties: {
+            app_id: { bsonType: "objectId" },
+            user_id: { bsonType: "objectId" },
+            pet_id: { bsonType: "objectId" },
+            doc_id: { bsonType: "objectId" },
+            record_id: { bsonType: "objectId" }
+         }
+      }
+   }
+});
