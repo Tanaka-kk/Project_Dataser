@@ -1,3 +1,22 @@
+/**
+ * server.js — REST API ระบบนัดหมายคลินิกสัตว์ (Express + MongoDB)
+ *
+ * ตั้งค่าผ่าน .env:
+ *   MONGO_URI    (เช่น mongodb://localhost:27017/appointment_db หรือ connection string)
+ *   PORT         (ค่าเริ่มต้น 8000)
+ *   VERCEL       (กำหนดโดย Vercel เมื่อรันแบบ serverless)
+ *
+ * Collections: users, pets, doctors, appointments, medical_records
+ * ทุก id ในเส้นทาง (:user_id, :pet_id, :doc_id, :app_id, :record_id) คือ MongoDB ObjectId
+ *
+ * รูปแบบ error ทั่วไป:
+ *   500 → { "error": true, "message": "Internal Server Error" } หรือรูปแบบเฉพาะตาม endpoint
+ *
+ * หมายเหตุ:
+ * - รันแบบปกติ (local/Docker): เรียก app.listen()
+ * - รันแบบ Vercel (serverless): export app ออกไปโดยไม่เรียก listen
+ * - ใช้ middleware เชื่อมต่อ DB ก่อนทุก request ด้วยการ cache connect() promise
+ */
 require("dotenv").config()
 const express = require("express")
 const { MongoClient, ObjectId } = require("mongodb")
@@ -22,10 +41,12 @@ const client = new MongoClient(process.env.MONGO_URI)
 let db
 let dbPromise
 
-// Vercel runs this file as a serverless function: a fresh request can land on a
-// warm instance that already connected, or a cold one that hasn't. Caching the
-// connect() promise means every request reuses the same connection instead of
-// opening a new one each time.
+/**
+ * getDb() — ดึง database instance พร้อม caching connection สำหรับ serverless
+ * การทำงาน: ถ้ายังไม่เคย connect → สร้าง promise ของ client.connect() แล้วคืน db
+ * เมื่อรันบน Vercel (warm instance) จะ reuse promise เดิม ไม่เปิด connection ใหม่ทุก request
+ * @returns {Promise<Db>} MongoDB database instance
+ */
 function getDb() {
   if (!dbPromise) {
     dbPromise = client.connect().then(() => client.db())
@@ -33,6 +54,11 @@ function getDb() {
   return dbPromise
 }
 
+/**
+ * DB middleware — เชื่อมต่อ MongoDB ก่อนประมวลผล request ทุกครั้ง
+ * การทำงาน: await getDb() แล้วเก็บ db ไว้ใช้ใน request scope
+ * ถ้าเชื่อมต่อไม่สำเร็จ → ตอบ 500 { "error": true, "message": "Database connection failed" }
+ */
 app.use(async (req, res, next) => {
   try {
     db = await getDb()
@@ -43,33 +69,82 @@ app.use(async (req, res, next) => {
   }
 })
 
+/**
+ * idify(field) — แปลง _id เป็น field ที่กำหนด
+ * ตัวอย่าง: rows.map(idify("user_id")) จะได้ { user_id: ..., ...rest }
+ * @param {string} field - ชื่อ field ที่จะใช้แทน _id
+ * @returns {function(Object|null): Object|null}
+ */
 const idify = (field) => (doc) => {
   if (!doc) return doc
   const { _id, ...rest } = doc
   return { [field]: _id, ...rest }
 }
 
-//get health status
+// ------------------------------------------------- Check -------------------------------------------------
+/**
+ * GET /health — เช็คว่า server ยังทำงานอยู่
+ * 200 → { "status": "Online" }
+ */
 app.get("/health", async (req, res) => {
   res.status(200).json({ status: "Online" })
 })
 
 // ------------------------------------------------ PAGES -------------------------------------------------
 
+/**
+ * GET / — Render หน้า login
+ */
 app.get("/", (req, res) => res.render("login"))
+/**
+ * GET /register — Render หน้าสมัครสมาชิก
+ */
 app.get("/register", (req, res) => res.render("register"))
+/**
+ * GET /home — Render หน้า Home
+ */
 app.get("/home", (req, res) => res.render("home"))
+/**
+ * GET /pet — Render หน้า Pet
+ */
 app.get("/pet", (req, res) => res.render("pet"))
+/**
+ * GET /petDetail — Render หน้า Pet Detail
+ */
 app.get("/petDetail", (req, res) => res.render("petDetail"))
+/**
+ * GET /petHistory — Render หน้า Pet History
+ */
 app.get("/petHistory", (req, res) => res.render("petHistory"))
+/**
+ * GET /medicalRecord — Render หน้า Medical Record
+ */
 app.get("/medicalRecord", (req, res) => res.render("medicalRecord"))
+/**
+ * GET /booking — Render หน้า Booking
+ */
 app.get("/booking", (req, res) => res.render("booking"))
+/**
+ * GET /appointments — Render หน้า Appointments
+ */
 app.get("/appointments", (req, res) => res.render("appointments"))
+/**
+ * GET /profile — Render หน้า Profile
+ */
 app.get("/profile", (req, res) => res.render("profile"))
+/**
+ * GET /admin — Render หน้า Admin
+ */
 app.get("/admin", (req, res) => res.render("admin"))
+/**
+ * GET /doctor — Render หน้า Doctor
+ */
 app.get("/doctor", (req, res) => res.render("doctor"))
 
-// Get all collections
+/**
+ * GET /tables — ดูชื่อ collection ทั้งหมดในฐานข้อมูล
+ * 200 → [ "users", "pets", "doctors", "appointments", "medical_records", ... ]
+ */
 app.get("/tables", async (req, res) => {
   try {
     const collections = await db.listCollections().toArray();
@@ -80,7 +155,10 @@ app.get("/tables", async (req, res) => {
   }
 });
 
-// Get all users
+/**
+ * GET /users — ดึงข้อมูล user ทั้งหมด (ไม่ส่ง password กลับ)
+ * 200 → [ { "user_id": "665f1c2e9a1b2c3d4e5f6789", "username": "...", "full_name": "", "phone": "", "role": "user", ... } ]
+ */
 app.get("/users", async (req, res) => {
   try {
     const rows = await db.collection("users")
@@ -95,7 +173,17 @@ app.get("/users", async (req, res) => {
 
 // ------------------------------------------------ USER -------------------------------------------------
 
-// Register
+/**
+ * POST /register — สมัครสมาชิกใหม่ (role = "user")
+ * การทำงาน:
+ *   1. เช็คว่ากรอก username / password / confirm_password ครบ
+ *   2. เช็คว่า password ตรงกับ confirm_password
+ *   3. เช็คว่า username ยังไม่ถูกใช้
+ *   4. เข้ารหัส password ด้วย bcrypt แล้วบันทึกลง users
+ * Body: { "username": "donno", "password": "123", "confirm_password": "123" }
+ * 201 → { "error": false, "message": "Registration successful!" }
+ * 400 → กรอกไม่ครบ | รหัสผ่านไม่ตรงกัน | username ซ้ำ
+ */
 app.post("/register", async (req, res) => {
   try {
     const { username, password, confirm_password } = req.body;
@@ -148,6 +236,14 @@ app.post("/register", async (req, res) => {
   }
 });
 
+/**
+ * POST /login — เข้าสู่ระบบ
+ * การทำงาน: หา user จาก username แล้วเทียบ password กับค่าที่เข้ารหัสด้วย bcrypt
+ * Body: { "username": "donno", "password": "123" }
+ * 200 → { "error": false, "message": "Login successful", "user_id": "...", "username": "...", "role": "user", "doc_id": null }
+ * 400 → กรอกไม่ครบ
+ * 401 → username หรือ password ผิด
+ */
 app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -195,6 +291,10 @@ app.post("/login", async (req, res) => {
   }
 });
 
+/**
+ * GET /infoUser/:user_id — ดูข้อมูลโปรไฟล์ของ user (ไม่ส่ง password กลับ)
+ * 200 → { "user_id": "...", "username": "...", "full_name": "...", "phone": "..." }
+ */
 app.get("/infoUser/:user_id", async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -214,6 +314,12 @@ app.get("/infoUser/:user_id", async (req, res) => {
 });
 
 
+/**
+ * PUT /updateUser/:user_id — แก้ไขข้อมูลส่วนตัวของ user
+ * Body: { "full_name": "...", "phone": "..." }
+ * 200 → { "error": false, "message": "User updated successfully" }
+ * Note: ตอบสำเร็จเสมอ แม้ไม่พบ user_id
+ */
 app.put("/updateUser/:user_id", async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -238,6 +344,11 @@ app.put("/updateUser/:user_id", async (req, res) => {
 
 // ------------------------------------------------- PET PART -------------------------------------------------
 
+/**
+ * POST /insertPet/:user_id — เพิ่มสัตว์เลี้ยงให้ user
+ * Body: { "pet_name": "...", "pet_type": "...", "pet_age": "YYYY-MM-DD" }
+ * 201 → { "error": false, "message": "Pet added successfully!" }
+ */
 app.post("/insertPet/:user_id", async (req, res) => {
   try {
     const { pet_name, pet_type, pet_age } = req.body;
@@ -260,6 +371,10 @@ app.post("/insertPet/:user_id", async (req, res) => {
   }
 });
 
+/**
+ * GET /getpets/:user_id — ดึงสัตว์เลี้ยงทั้งหมดของ user (เฉพาะ pet_name)
+ * 200 → [ { "pet_id": "...", "pet_name": "..." } ]
+ */
 app.get("/getpets/:user_id", async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -273,6 +388,10 @@ app.get("/getpets/:user_id", async (req, res) => {
   }
 });
 
+/**
+ * GET /infopet/:pet_id — ดูข้อมูลสัตว์เลี้ยง 1 ตัว
+ * 200 → { "pet_id": "...", "pet_name": "...", "species": "...", "bloodtype": "...", "birth_date": "...", "weight": ..., "allergy": "..." }
+ */
 app.get("/infopet/:pet_id", async (req, res) => {
   try {
     const { pet_id } = req.params;
@@ -291,6 +410,13 @@ app.get("/infopet/:pet_id", async (req, res) => {
   }
 });
 
+/**
+ * PUT /updatePet/:pet_id — แก้ไขข้อมูลสัตว์เลี้ยง
+ * Body: { "pet_name": "...", "species": "...", "bloodtype": "...", "birth_date": "YYYY-MM-DD", "weight": ..., "allergy": "..." }
+ * 200 → { "error": false, "message": "Pet updated successfully" }
+ * 400 → Weight cannot be negative
+ * Note: ตอบสำเร็จแม้ไม่พบ pet_id
+ */
 app.put("/updatePet/:pet_id", async (req, res) => {
   try {
     const { pet_id } = req.params;
@@ -327,6 +453,12 @@ app.put("/updatePet/:pet_id", async (req, res) => {
   }
 });
 
+/**
+ * DELETE /deletePet/:pet_id — ลบสัตว์เลี้ยง
+ * การทำงาน: ตรวจสอบว่ามีนัดหมายหรือประวัติการรักษาที่ผูกกับสัตว์เลี้ยงอยู่หรือไม่ ก่อนลบ
+ * 200 → { "error": false, "message": "Pet deleted successfully" }
+ * 500 → Cannot delete a pet with existing appointments or medical records (กรณีถูกใช้งานอยู่)
+ */
 app.delete("/deletePet/:pet_id", async (req, res) => {
   try {
     const petId = new ObjectId(req.params.pet_id);
@@ -358,7 +490,13 @@ app.delete("/deletePet/:pet_id", async (req, res) => {
 
 // ------------------------------------------------- MEDICAL RECORDS -------------------------------------------------
 
-// Doctor adds a medical record against one of their appointments
+/**
+ * POST /insertMedRecord/:app_id — บันทึกประวัติการรักษา (ผูกกับ appointment)
+ * การทำงาน: ดึงข้อมูล appointment จาก app_id แล้วบันทึกลง medical_records
+ * Body: { "diagnosis": "...", "treatment_detail": "...", "cost": 500, "treatment_date": "YYYY-MM-DD", "treatment_time": "HH:MM:SS" }
+ * 201 → { "error": false, "message": "Medical record added successfully!" }
+ * 404 → Appointment not found
+ */
 app.post("/insertMedRecord/:app_id", async (req, res) => {
   try {
     const { app_id } = req.params;
@@ -394,6 +532,10 @@ app.post("/insertMedRecord/:app_id", async (req, res) => {
   }
 });
 
+/**
+ * GET /GetMedicalRecord/:pet_id — ดึงประวัติการรักษาทั้งหมดของสัตว์เลี้ยง
+ * 200 → [ { "record_id": "...", "diagnosis": "...", "treatment_date": "..." } ] (เรียงวันที่ใหม่→เก่า)
+ */
 app.get("/GetMedicalRecord/:pet_id", async (req, res) => {
   try {
     const { pet_id } = req.params;
@@ -411,6 +553,10 @@ app.get("/GetMedicalRecord/:pet_id", async (req, res) => {
   }
 });
 
+/**
+ * GET /GetMedicalRecordInfo/:record_id — ดูประวัติการรักษา 1 รายการ (รวมชื่อหมอ)
+ * 200 → { "record_id": "...", "diagnosis": "...", "treatment_detail": "...", "cost": ..., "treatment_date": "...", "treatment_time": "...", "doc_name": "..." }
+ */
 app.get("/GetMedicalRecordInfo/:record_id", async (req, res) => {
   try {
     const { record_id } = req.params;
@@ -437,6 +583,13 @@ app.get("/GetMedicalRecordInfo/:record_id", async (req, res) => {
 
 // ------------------------------------------------- Appointments -------------------------------------------------
 
+/**
+ * POST /insertAppointment/:pet_id/:user_id/:doc_id — จองนัดหมาย
+ * การทำงาน: ตรวจสอบวันที่ไม่ใช่อดีต แล้วบันทึกนัดลง appointments (status เริ่มต้นเป็น null)
+ * Body: { "app_date": "YYYY-MM-DD", "app_time": "HH:MM:SS", "reason": "..." }
+ * 201 → { "error": false, "message": "Appointment added successfully!" }
+ * 400 → Appointment date cannot be in the past
+ */
 app.post("/insertAppointment/:pet_id/:user_id/:doc_id", async (req, res) => {
   try {
     const { pet_id, user_id, doc_id } = req.params;
@@ -474,6 +627,10 @@ app.post("/insertAppointment/:pet_id/:user_id/:doc_id", async (req, res) => {
   }
 });
 
+/**
+ * GET /GetAppointmentslist/:user_id — ดึงนัดหมายทั้งหมดของ user (รวม pet_name, doc_name)
+ * 200 → [ { "app_id": "...", "pet_id": "...", "doc_id": "...", "reason": "...", "status": null, "app_date": "...", "app_time": "...", "pet_name": "...", "doc_name": "..." } ] (เรียงใหม่→เก่า)
+ */
 app.get("/GetAppointmentslist/:user_id", async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -503,6 +660,12 @@ app.get("/GetAppointmentslist/:user_id", async (req, res) => {
   }
 });
 
+/**
+ * DELETE /deleteAppointment/:app_id — ยกเลิก/ลบนัดหมาย
+ * การทำงาน: ตรวจสอบว่ามี medical record ที่ผูกกับนัดนี้อยู่หรือไม่ ก่อนลบ
+ * 200 → { "error": false, "message": "Appointment cancelled" }
+ * 500 → Cannot cancel an appointment that already has a medical record (กรณีมี record แล้ว)
+ */
 app.delete("/deleteAppointment/:app_id", async (req, res) => {
   try {
     const appId = new ObjectId(req.params.app_id);
@@ -530,7 +693,12 @@ app.delete("/deleteAppointment/:app_id", async (req, res) => {
   }
 });
 
-// Doctor accepts a pending appointment
+/**
+ * PUT /updateAppointmentStatus/:app_id — เปลี่ยนสถานะนัดหมาย
+ * Body: { "status": "approved" | "rejected" | ... }
+ * 200 → { "error": false, "message": "Appointment status updated" }
+ * Note: ตอบสำเร็จเสมอ แม้ไม่พบ app_id
+ */
 app.put("/updateAppointmentStatus/:app_id", async (req, res) => {
   try {
     const { app_id } = req.params;
@@ -553,7 +721,10 @@ app.put("/updateAppointmentStatus/:app_id", async (req, res) => {
   }
 });
 
-// Admin: every appointment across every patient
+/**
+ * GET /GetAllAppointments — ดึงนัดหมายทั้งหมด (Admin) รวม username, pet_name, doc_name
+ * 200 → [ { "app_id": "...", "username": "...", "pet_name": "...", "doc_name": "...", "reason": "...", "status": ..., "app_date": "...", "app_time": "..." } ] (เรียงใหม่→เก่า)
+ */
 app.get("/GetAllAppointments", async (req, res) => {
   try {
     const rows = await db.collection("appointments").aggregate([
@@ -581,7 +752,10 @@ app.get("/GetAllAppointments", async (req, res) => {
   }
 });
 
-// Doctor: appointments assigned to them, across all patients
+/**
+ * GET /doctorAppointments/:doc_id — ดึงนัดหมายทั้งหมดของหมอ (เรียงตามวันที่เวลา)
+ * 200 → [ { "app_id": "...", "pet_id": "...", "reason": "...", "status": ..., "app_date": "...", "app_time": "...", "pet_name": "...", "username": "..." } ] (เรียงเก่า→ใหม่)
+ */
 app.get("/doctorAppointments/:doc_id", async (req, res) => {
   try {
     const { doc_id } = req.params;
@@ -611,6 +785,10 @@ app.get("/doctorAppointments/:doc_id", async (req, res) => {
 
 // ------------------------------------------------- Doctor -------------------------------------------------
 
+/**
+ * GET /GetDoctors — ดึงรายชื่อหมอทั้งหมด
+ * 200 → [ { "doc_id": "...", "doc_name": "...", "specialization": "...", "phone": "...", "is_available": true } ]
+ */
 app.get("/GetDoctors", async (req, res) => {
   try {
     const rows = await db.collection("doctors").find({}).toArray();
@@ -624,7 +802,17 @@ app.get("/GetDoctors", async (req, res) => {
   }
 });
 
-// Admin creates a doctor account: a Doctors profile + a linked User login
+/**
+ * POST /admin/addDoctor — สร้างบัญชีหมอ (Admin)
+ * การทำงาน:
+ *   1. ตรวจสอบข้อมูลที่จำเป็น (username, password, doc_name, specialization)
+ *   2. ตรวจสอบ username ไม่ซ้ำ
+ *   3. สร้าง doctors document
+ *   4. สร้าง users document ผูกกับ doctor (role = "doctor")
+ * Body: { "username": "...", "password": "...", "doc_name": "...", "specialization": "...", "phone": "..." }
+ * 201 → { "error": false, "message": "Doctor account created successfully!" }
+ * 400 → ข้อมูลไม่ครบ | username ซ้ำ
+ */
 app.post("/admin/addDoctor", async (req, res) => {
   try {
     const { username, password, doc_name, specialization, phone } = req.body;
@@ -673,6 +861,12 @@ app.post("/admin/addDoctor", async (req, res) => {
   }
 });
 
+/**
+ * PUT /updateDoctor/:doc_id — แก้ไขข้อมูลหมอ
+ * Body: { "doc_name": "...", "specialization": "...", "phone": "...", "is_available": true/false }
+ * 200 → { "error": false, "message": "Doctor updated successfully" }
+ * Note: ตอบสำเร็จเสมอ แม้ไม่พบ doc_id
+ */
 app.put("/updateDoctor/:doc_id", async (req, res) => {
   try {
     const { doc_id } = req.params;
@@ -695,6 +889,13 @@ app.put("/updateDoctor/:doc_id", async (req, res) => {
   }
 });
 
+/**
+ * DELETE /deleteDoctor/:doc_id — ลบหมอ
+ * การทำงาน: ตรวจสอบว่ามีนัดหมายหรือประวัติการรักษาที่ผูกกับหมออยู่หรือไม่ ก่อนลบ
+ *           ลบทั้ง doctors และ users ที่ผูกกับหมอนี้
+ * 200 → { "error": false, "message": "Doctor deleted successfully" }
+ * 500 → Cannot delete a doctor with existing appointments or medical records (กรณีถูกใช้งานอยู่)
+ */
 app.delete("/deleteDoctor/:doc_id", async (req, res) => {
   try {
     const docId = new ObjectId(req.params.doc_id);
@@ -724,6 +925,11 @@ app.delete("/deleteDoctor/:doc_id", async (req, res) => {
   }
 });
 
+/**
+ * Error middleware — จับ error ที่หลุดออกมาจาก route
+ * การทำงาน: อ่าน err.status แล้วตอบข้อความที่ตรงกับ status นั้น (ไม่รู้จัก → ใช้ของ 500)
+ * ตัวอย่าง: 404 → { "Message": "ไม่รู้จัก Route ที่เรียกใช้ครับ", "code": 404 }
+ */
 app.use((err, req, res, next) => {
     console.error(err);
 
@@ -742,9 +948,8 @@ app.use((err, req, res, next) => {
     res.status(status).json(messages[status] || messages[500]);
 });
 
-// Vercel imports this file as a serverless function and handles the HTTP
-// server itself — app.listen() is only for running this as a normal
-// long-lived process (local dev, Docker).
+// เริ่ม server ที่ PORT (ค่าเริ่มต้น 8000) รับทุก network interface
+// หมายเหตุ: Vercel จัดการ HTTP server เอง → ข้าม app.listen() เมื่อรันบน Vercel
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 8000
 
