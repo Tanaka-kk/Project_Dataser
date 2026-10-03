@@ -104,7 +104,9 @@
             <div class="d-flex gap-2">
               <a href="/petDetail?id=${a.pet_id}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clipboard2-pulse"></i></a>
               ${!a.status ? `<button class="btn btn-success btn-sm" onclick="acceptAppointment('${a.app_id}')"><i class="bi bi-check-lg"></i></button>` : ""}
-              <button class="btn btn-brand btn-sm" onclick="openAddRecord('${a.app_id}')"><i class="bi bi-plus-lg"></i></button>
+              ${a.has_record
+                ? `<span class="btn btn-outline-secondary btn-sm disabled"><i class="bi bi-check2-circle"></i></span>`
+                : `<button class="btn btn-brand btn-sm" onclick="openAddRecord('${a.app_id}')"><i class="bi bi-plus-lg"></i></button>`}
             </div>
           </td>
         </tr>
