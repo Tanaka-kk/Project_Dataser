@@ -104,7 +104,8 @@
             <div class="d-flex gap-2">
               <a href="/petDetail?id=${a.pet_id}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clipboard2-pulse"></i></a>
               ${!a.status ? `<button class="btn btn-success btn-sm" onclick="acceptAppointment('${a.app_id}')"><i class="bi bi-check-lg"></i></button>` : ""}
-              ${a.has_record
+              ${!a.status ? `<button class="btn btn-outline-danger btn-sm" onclick="rejectAppointment('${a.app_id}')"><i class="bi bi-x-lg"></i></button>` : ""}
+              ${a.status === "Rejected" ? "" : a.has_record
                 ? `<span class="btn btn-outline-secondary btn-sm disabled"><i class="bi bi-check2-circle"></i></span>`
                 : `<button class="btn btn-brand btn-sm" onclick="openAddRecord('${a.app_id}')"><i class="bi bi-plus-lg"></i></button>`}
             </div>
@@ -131,6 +132,24 @@
 
       if (data.error) {
         showAlert("alertBox", data.message || "Failed to accept appointment");
+        return;
+      }
+
+      loadAppointments();
+    }
+
+    async function rejectAppointment(app_id) {
+      if (!confirm("Reject this appointment?")) return;
+
+      const res = await fetch(${API_BASE}/updateAppointmentStatus/${app_id}, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Rejected" })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        showAlert("alertBox", data.message || "Failed to reject appointment");
         return;
       }
 
