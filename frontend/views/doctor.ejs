@@ -141,7 +141,7 @@
     async function rejectAppointment(app_id) {
       if (!confirm("Reject this appointment?")) return;
 
-      const res = await fetch(${API_BASE}/updateAppointmentStatus/${app_id}, {
+      const res = await fetch(`${API_BASE}/updateAppointmentStatus/${app_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Rejected" })
